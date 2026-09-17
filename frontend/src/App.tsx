@@ -49,9 +49,26 @@ const MainApp: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      loadInitialData();
+      if (user?.is_admin) {
+        setActiveTab('admin');
+      } else {
+        loadInitialData();
+      }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.is_admin]);
+
+  // Handle browser back/forward and /admin path changes
+  useEffect(() => {
+    const handlePopState = () => {
+      if (window.location.pathname === '/admin' || window.location.hash === '#admin') {
+        setActiveTab('admin');
+      } else {
+        setActiveTab('dashboard');
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Global Keyboard Shortcuts (e.g. 'n' for Quick Add)
   useEffect(() => {

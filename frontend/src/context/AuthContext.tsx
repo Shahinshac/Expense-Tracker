@@ -8,6 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credentials: any) => Promise<void>;
+  adminLogin: (credentials: { username: string; password: string }) => Promise<void>;
   register: (data: any) => Promise<any>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -58,6 +59,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('user', JSON.stringify(res.user));
   };
 
+  const adminLogin = async (credentials: { username: string; password: string }) => {
+    const res = await api.adminLogin(credentials);
+    setToken(res.access_token);
+    setUser(res.user);
+    localStorage.setItem('token', res.access_token);
+    localStorage.setItem('user', JSON.stringify(res.user));
+  };
+
   const register = async (data: any) => {
     const res = await api.register(data);
     return res;
@@ -93,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAuthenticated: !!token && !!user,
       isLoading,
       login,
+      adminLogin,
       register,
       logout,
       refreshUser,

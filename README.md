@@ -228,39 +228,43 @@ Install FinStudent as a native app on your phone:
 | `SECRET_KEY` | Backend | 32+ char secret for signing JWT auth tokens | `f7a6b9...` |
 | `ALGORITHM` | Backend | JWT signing algorithm | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Backend | Token validity period (default: 7 days) | `10080` |
-| `FRONTEND_URL` | Backend | Allowed origin for CORS headers | `https://finstudent.vercel.app` |
+| `FRONTEND_URL` | Backend | Allowed origin for CORS headers | `https://expensfi.vercel.app` |
 | `SUPABASE_URL` | Backend | Supabase project URL | `https://xyzcompany.supabase.co` |
 | `SUPABASE_KEY` | Backend | Supabase service/anon key (Keep server-side only!) | `eyJhbGciOi...` |
 | `SUPABASE_STORAGE_BUCKET` | Backend | Storage bucket for receipt files | `receipts` |
 | `MAX_UPLOAD_SIZE_MB` | Backend | Maximum allowed receipt size | `5` |
-| `ADMIN_EMAIL` | Backend | Email of owner/initial administrator (auto-granted `is_admin=True` and `status=APPROVED`) | `owner@example.com` |
+| `ADMIN_USERNAME` | Backend | Administrator username for direct admin login | `Shahinsha` |
+| `ADMIN_PASSWORD` | Backend | Secure password for administrator login (never commit) | `change-this-in-production` |
 | `MAX_USERS` | Backend | Maximum allowed registered users before registration closes (Optional free-tier guard) | `20` |
 | `VITE_API_URL` | Frontend | Deployed backend API domain | `https://finstudent-api.onrender.com` |
 
 > [!CAUTION]
-> **Never commit your Supabase Service Role Key, JWT Secret, or database password to GitHub.** Always configure secrets via the Render and Vercel environment dashboards.
+> **Never commit your Supabase Service Role Key, JWT Secret, database password, or ADMIN_PASSWORD to GitHub.** Always configure secrets via the Render environment dashboard.
 
 ---
 
-## 🛡️ Admin Approval & User Registration Workflow
+## 🛡️ Admin Login & User Approval System
 
-To keep this personal instance secure and prevent unauthorized usage on free-tier infrastructure:
-
-1. **Registration Status**: When a new user registers, their account status is set to `PENDING`. They are **NOT** issued a JWT session.
-2. **Login Protection**: Attempts to log in while `PENDING`, `REJECTED`, or `DISABLED` are blocked server-side with HTTP 403.
-3. **Admin Bootstrap (`ADMIN_EMAIL`)**:
-   - Set `ADMIN_EMAIL=your-email@example.com` in your backend environment variables (e.g. Render Dashboard).
-   - When you log in with this email, the backend ensures your account is `is_admin=True` and `status='APPROVED'`.
-4. **Admin Dashboard (`/admin`)**:
-   - Only users with `is_admin: true` can access the Admin Panel (via desktop sidebar or mobile more sheet).
-   - Direct navigation to `/admin` validates server-side token privileges.
+1. **Direct Admin Login**:
+   - The administrator has a dedicated direct login tab on the sign-in page ("Admin Login").
+   - Admin logs in with `ADMIN_USERNAME` and `ADMIN_PASSWORD` (configured on Render).
+   - Admin does **not** register or require a database user row.
+   - Upon successful verification, admin receives a signed JWT with `is_admin=True` and is directed to `/admin`.
+2. **User Registration & Approval Flow**:
+   - Normal users register with their email and password.
+   - Upon registration, `status = PENDING`. Normal users receive **no** JWT token upon registering.
+   - Login attempts for unapproved accounts are rejected (HTTP 403) with clear feedback:
+     - `PENDING`: *"Your account is awaiting administrator approval."*
+     - `REJECTED`: *"Your registration request was rejected."*
+     - `DISABLED`: *"Your account has been disabled."*
+3. **Admin Dashboard (`/admin`)**:
+   - Only users with `is_admin: true` can access the Admin Panel.
    - Actions available:
      - **Pending Users**: Approve or Reject.
      - **Approved Users**: Disable account.
      - **Rejected/Disabled Users**: Re-approve/Enable or permanently Delete.
    - Accidental operations are protected with modal confirmation dialogues.
-   - Admins cannot disable or delete their own active account.
-5. **Free-Tier Protection (`MAX_USERS`)**:
+4. **Free-Tier Protection (`MAX_USERS`)**:
    - Optional environment variable (e.g. `MAX_USERS=20`).
    - If user count reaches the ceiling, further registrations are blocked with: *"Registration is currently closed because the maximum number of users has been reached."*
 

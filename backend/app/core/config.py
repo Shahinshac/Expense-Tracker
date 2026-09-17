@@ -25,10 +25,10 @@ class Settings(BaseSettings):
     SUPABASE_KEY: Optional[str] = os.getenv("SUPABASE_KEY", os.getenv("SUPABASE_SERVICE_ROLE_KEY", None))
     SUPABASE_STORAGE_BUCKET: str = os.getenv("SUPABASE_STORAGE_BUCKET", "receipts")
 
-    # Admin & User Registration Safeguards
-    ADMIN_EMAIL: Optional[str] = os.getenv("ADMIN_EMAIL", None)
+    # Admin Credentials & User Safeguards
+    ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "Shahinsha")
+    ADMIN_PASSWORD: Optional[str] = os.getenv("ADMIN_PASSWORD", None)
     MAX_USERS: Optional[int] = int(os.getenv("MAX_USERS")) if os.getenv("MAX_USERS") and os.getenv("MAX_USERS").strip().isdigit() else None
-
 
     # Uploads (Local fallback & size limits)
     UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "uploads")
@@ -42,6 +42,8 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://localhost:4173",
+        "https://expensfi.vercel.app",
+        "https://finstudent.vercel.app",
     ]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="after")

@@ -21,14 +21,12 @@ def test_01_new_registration_creates_pending_user(client: TestClient):
 
 def test_02_pending_user_cannot_login(client: TestClient):
     """2. Pending user cannot login and receives 403 with exact required message."""
-    # Register user
     client.post("/api/v1/auth/register", json={
         "email": "pending_login@college.edu",
         "password": "Password123!",
         "full_name": "Pending Login"
     })
 
-    # Attempt login
     res = client.post("/api/v1/auth/login", json={
         "email": "pending_login@college.edu",
         "password": "Password123!"
@@ -125,36 +123,30 @@ def test_07_non_admin_cannot_access_admin_endpoints(client: TestClient, db_sessi
     assert client.post("/api/v1/admin/users/1/enable", headers=headers).status_code == 403
     assert client.delete("/api/v1/admin/users/1", headers=headers).status_code == 403
 
-def test_08_admin_bootstrap_and_can_list_users_and_stats(client: TestClient, db_session, monkeypatch):
-    """8. Admin bootstrapped via ADMIN_EMAIL can list users, stats, and individual user details."""
-    admin_email = "superadmin@college.edu"
-    monkeypatch.setattr(settings, "ADMIN_EMAIL", admin_email)
+def test_08_admin_direct_login_with_correct_credentials_and_stats(client: TestClient, monkeypatch):
+    """8. Admin logs in directly via /auth/admin/login using ADMIN_USERNAME and ADMIN_PASSWORD."""
+    test_username = "Shahinsha"
+    test_password = "testSecureAdminPass123"
+    monkeypatch.setattr(settings, "ADMIN_USERNAME", test_username)
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", test_password)
 
-    # Register admin
-    client.post("/api/v1/auth/register", json={
-        "email": admin_email,
-        "password": "SuperSecret123!",
-        "full_name": "Super Admin"
-    })
-
-    # Admin should be APPROVED and is_admin
-    login_res = client.post("/api/v1/auth/login", json={
-        "email": admin_email,
-        "password": "SuperSecret123!"
+    login_res = client.post("/api/v1/auth/admin/login", json={
+        "username": test_username,
+        "password": test_password
     })
     assert login_res.status_code == 200
-    token = login_res.json()["access_token"]
-    assert login_res.json()["user"]["is_admin"] is True
-    assert login_res.json()["user"]["status"] == "APPROVED"
+    data = login_res.json()
+    assert "access_token" in data
+    assert data["user"]["is_admin"] is True
+    assert data["user"]["status"] == "APPROVED"
+    assert data["user"]["full_name"] == test_username
 
-    admin_headers = {"Authorization": f"Bearer {token}"}
+    admin_headers = {"Authorization": f"Bearer {data['access_token']}"}
 
     # List users
     users_res = client.get("/api/v1/admin/users", headers=admin_headers)
     assert users_res.status_code == 200
-    users = users_res.json()
-    assert isinstance(users, list)
-    assert len(users) >= 1
+    assert isinstance(users_res.json(), list)
 
     # Check stats
     stats_res = client.get("/api/v1/admin/stats", headers=admin_headers)
@@ -166,15 +158,40 @@ def test_08_admin_bootstrap_and_can_list_users_and_stats(client: TestClient, db_
     assert "disabled_users" in stats
     assert "rejected_users" in stats
 
-def test_09_admin_can_approve_pending_user(client: TestClient, db_session, monkeypatch):
-    """9. Admin can approve a pending user."""
-    admin_email = "admin_approver@college.edu"
-    monkeypatch.setattr(settings, "ADMIN_EMAIL", admin_email)
-    create_approved_user(client, db_session, admin_email, "AdminPass123!", "Admin Approver", is_admin=True)
+def test_09_admin_login_with_wrong_password(client: TestClient, monkeypatch):
+    """9. Admin login fails with wrong password (401 Unauthorized)."""
+    monkeypatch.setattr(settings, "ADMIN_USERNAME", "Shahinsha")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "correctPassword123")
 
-    login_res = client.post("/api/v1/auth/login", json={"email": admin_email, "password": "AdminPass123!"})
-    admin_token = login_res.json()["access_token"]
-    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+    login_res = client.post("/api/v1/auth/admin/login", json={
+        "username": "Shahinsha",
+        "password": "wrongPassword"
+    })
+    assert login_res.status_code == 401
+    assert "Incorrect admin username or password" in login_res.json()["detail"]
+
+def test_10_admin_login_with_wrong_username(client: TestClient, monkeypatch):
+    """10. Admin login fails with wrong username (401 Unauthorized)."""
+    monkeypatch.setattr(settings, "ADMIN_USERNAME", "Shahinsha")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "correctPassword123")
+
+    login_res = client.post("/api/v1/auth/admin/login", json={
+        "username": "WrongAdmin",
+        "password": "correctPassword123"
+    })
+    assert login_res.status_code == 401
+    assert "Incorrect admin username or password" in login_res.json()["detail"]
+
+def test_11_admin_can_approve_pending_user(client: TestClient, db_session, monkeypatch):
+    """11. Admin can approve a pending user."""
+    monkeypatch.setattr(settings, "ADMIN_USERNAME", "Shahinsha")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "adminSecret123")
+
+    login_res = client.post("/api/v1/auth/admin/login", json={
+        "username": "Shahinsha",
+        "password": "adminSecret123"
+    })
+    admin_headers = {"Authorization": f"Bearer {login_res.json()['access_token']}"}
 
     # Register new user
     client.post("/api/v1/auth/register", json={
@@ -194,13 +211,15 @@ def test_09_admin_can_approve_pending_user(client: TestClient, db_session, monke
     user_login = client.post("/api/v1/auth/login", json={"email": "to_approve@college.edu", "password": "UserPass123!"})
     assert user_login.status_code == 200
 
-def test_10_admin_can_reject_pending_user(client: TestClient, db_session, monkeypatch):
-    """10. Admin can reject a pending user."""
-    admin_email = "admin_rejector@college.edu"
-    monkeypatch.setattr(settings, "ADMIN_EMAIL", admin_email)
-    create_approved_user(client, db_session, admin_email, "AdminPass123!", "Admin Rejector", is_admin=True)
+def test_12_admin_can_reject_pending_user(client: TestClient, db_session, monkeypatch):
+    """12. Admin can reject a pending user."""
+    monkeypatch.setattr(settings, "ADMIN_USERNAME", "Shahinsha")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "adminSecret123")
 
-    login_res = client.post("/api/v1/auth/login", json={"email": admin_email, "password": "AdminPass123!"})
+    login_res = client.post("/api/v1/auth/admin/login", json={
+        "username": "Shahinsha",
+        "password": "adminSecret123"
+    })
     admin_headers = {"Authorization": f"Bearer {login_res.json()['access_token']}"}
 
     client.post("/api/v1/auth/register", json={
@@ -218,20 +237,21 @@ def test_10_admin_can_reject_pending_user(client: TestClient, db_session, monkey
     assert user_login.status_code == 403
     assert user_login.json()["detail"] == "Your registration request was rejected."
 
-def test_11_admin_can_disable_and_12_enable_user(client: TestClient, db_session, monkeypatch):
-    """11. Admin can disable an approved user and 12. re-enable a disabled user."""
-    admin_email = "admin_enabler@college.edu"
-    monkeypatch.setattr(settings, "ADMIN_EMAIL", admin_email)
-    create_approved_user(client, db_session, admin_email, "AdminPass123!", "Admin Enabler", is_admin=True)
+def test_13_admin_can_disable_and_enable_user(client: TestClient, db_session, monkeypatch):
+    """13. Admin can disable an approved user and re-enable them."""
+    monkeypatch.setattr(settings, "ADMIN_USERNAME", "Shahinsha")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "adminSecret123")
 
-    login_res = client.post("/api/v1/auth/login", json={"email": admin_email, "password": "AdminPass123!"})
+    login_res = client.post("/api/v1/auth/admin/login", json={
+        "username": "Shahinsha",
+        "password": "adminSecret123"
+    })
     admin_headers = {"Authorization": f"Bearer {login_res.json()['access_token']}"}
 
-    # Create approved user
     target_res = create_approved_user(client, db_session, "toggle_user@college.edu", "UserPass123!", "Toggle User")
     target_id = target_res["user"]["id"]
 
-    # 11. Disable
+    # Disable
     dis_res = client.post(f"/api/v1/admin/users/{target_id}/disable", headers=admin_headers)
     assert dis_res.status_code == 200
     assert dis_res.json()["status"] == "DISABLED"
@@ -239,7 +259,7 @@ def test_11_admin_can_disable_and_12_enable_user(client: TestClient, db_session,
     # User cannot login
     assert client.post("/api/v1/auth/login", json={"email": "toggle_user@college.edu", "password": "UserPass123!"}).status_code == 403
 
-    # 12. Enable
+    # Enable
     en_res = client.post(f"/api/v1/admin/users/{target_id}/enable", headers=admin_headers)
     assert en_res.status_code == 200
     assert en_res.json()["status"] == "APPROVED"
@@ -247,39 +267,31 @@ def test_11_admin_can_disable_and_12_enable_user(client: TestClient, db_session,
     # User can login again
     assert client.post("/api/v1/auth/login", json={"email": "toggle_user@college.edu", "password": "UserPass123!"}).status_code == 200
 
-def test_13_admin_can_delete_user_and_cannot_delete_self(client: TestClient, db_session, monkeypatch):
-    """13. Admin can delete a user and cannot delete themselves."""
-    admin_email = "admin_deleter@college.edu"
-    monkeypatch.setattr(settings, "ADMIN_EMAIL", admin_email)
-    admin_res = create_approved_user(client, db_session, admin_email, "AdminPass123!", "Admin Deleter", is_admin=True)
-    admin_id = admin_res["user"]["id"]
+def test_14_admin_can_delete_user(client: TestClient, db_session, monkeypatch):
+    """14. Admin can delete a user."""
+    monkeypatch.setattr(settings, "ADMIN_USERNAME", "Shahinsha")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "adminSecret123")
 
-    login_res = client.post("/api/v1/auth/login", json={"email": admin_email, "password": "AdminPass123!"})
+    login_res = client.post("/api/v1/auth/admin/login", json={
+        "username": "Shahinsha",
+        "password": "adminSecret123"
+    })
     admin_headers = {"Authorization": f"Bearer {login_res.json()['access_token']}"}
 
-    # Target user to delete
     target_res = create_approved_user(client, db_session, "victim@college.edu", "UserPass123!", "Victim")
     target_id = target_res["user"]["id"]
 
-    # Cannot delete self
-    self_del = client.delete(f"/api/v1/admin/users/{admin_id}", headers=admin_headers)
-    assert self_del.status_code == 400
-    assert "Administrators cannot delete their own account" in self_del.json()["detail"]
-
-    # Delete target user
     del_res = client.delete(f"/api/v1/admin/users/{target_id}", headers=admin_headers)
     assert del_res.status_code == 200
     assert del_res.json()["message"] == "User deleted successfully"
 
-    # User gone
     assert db_session.query(User).filter(User.id == target_id).first() is None
 
-def test_14_user_cannot_modify_is_admin_or_15_status(client: TestClient, db_session):
-    """14 & 15. Regular user cannot modify is_admin or status via PUT /me or any other profile endpoint."""
+def test_15_user_cannot_modify_is_admin_or_status(client: TestClient, db_session):
+    """15. Regular user cannot modify is_admin or status via PUT /me."""
     user_res = create_approved_user(client, db_session, "attacker@college.edu", "Password123!", "Attacker")
     headers = {"Authorization": f"Bearer {user_res['access_token']}"}
 
-    # Attempt to escalate privileges via /me
     res = client.put("/api/v1/auth/me", headers=headers, json={
         "full_name": "Elevated Attacker",
         "is_admin": True,
@@ -290,13 +302,11 @@ def test_14_user_cannot_modify_is_admin_or_15_status(client: TestClient, db_sess
     assert data["full_name"] == "Elevated Attacker"
     assert data["is_admin"] is False
 
-    # Check in DB directly
     db_user = db_session.query(User).filter(User.email == "attacker@college.edu").first()
     assert db_user.is_admin is False
 
 def test_16_max_users_blocks_new_registration(client: TestClient, db_session, monkeypatch):
     """16. MAX_USERS blocks new registration when count is reached."""
-    # Count current users
     current_count = db_session.query(User).count()
     monkeypatch.setattr(settings, "MAX_USERS", current_count)
 
@@ -308,13 +318,15 @@ def test_16_max_users_blocks_new_registration(client: TestClient, db_session, mo
     assert res.status_code == 403
     assert "Registration is currently closed because the maximum number of users has been reached." in res.json()["detail"]
 
-def test_17_admin_endpoints_never_leak_password_or_secrets(client: TestClient, db_session, monkeypatch):
+def test_17_admin_endpoints_never_leak_password_or_secrets(client: TestClient, monkeypatch):
     """17. Admin user listing and detail endpoints never expose passwords, hashes, or sensitive keys."""
-    admin_email = "security_auditor@college.edu"
-    monkeypatch.setattr(settings, "ADMIN_EMAIL", admin_email)
-    create_approved_user(client, db_session, admin_email, "AdminPass123!", "Security Auditor", is_admin=True)
+    monkeypatch.setattr(settings, "ADMIN_USERNAME", "Shahinsha")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "adminSecret123")
 
-    login_res = client.post("/api/v1/auth/login", json={"email": admin_email, "password": "AdminPass123!"})
+    login_res = client.post("/api/v1/auth/admin/login", json={
+        "username": "Shahinsha",
+        "password": "adminSecret123"
+    })
     admin_headers = {"Authorization": f"Bearer {login_res.json()['access_token']}"}
 
     users_res = client.get("/api/v1/admin/users", headers=admin_headers)
@@ -325,3 +337,22 @@ def test_17_admin_endpoints_never_leak_password_or_secrets(client: TestClient, d
         assert "password_hash" not in u
         assert "token" not in u
         assert "secret" not in u
+
+def test_18_admin_get_me_returns_admin_profile(client: TestClient, monkeypatch):
+    """18. Calling GET /api/v1/auth/me with admin token returns admin profile with is_admin=True."""
+    monkeypatch.setattr(settings, "ADMIN_USERNAME", "Shahinsha")
+    monkeypatch.setattr(settings, "ADMIN_PASSWORD", "adminSecret123")
+
+    login_res = client.post("/api/v1/auth/admin/login", json={
+        "username": "Shahinsha",
+        "password": "adminSecret123"
+    })
+    admin_token = login_res.json()["access_token"]
+    admin_headers = {"Authorization": f"Bearer {admin_token}"}
+
+    me_res = client.get("/api/v1/auth/me", headers=admin_headers)
+    assert me_res.status_code == 200
+    me_data = me_res.json()
+    assert me_data["is_admin"] is True
+    assert me_data["full_name"] == "Shahinsha"
+    assert me_data["status"] == "APPROVED"

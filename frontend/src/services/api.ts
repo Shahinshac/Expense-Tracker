@@ -26,7 +26,17 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     ...options.headers,
   };
 
-  const response = await fetch(url, { ...options, headers });
+  let response: Response;
+  try {
+    response = await fetch(url, { ...options, headers });
+  } catch (err: any) {
+    if (err instanceof TypeError && err.message.toLowerCase().includes('fetch')) {
+      throw new Error(
+        'Unable to connect to the backend server. If the server is on Render free-tier, it may be waking up from cold sleep (takes ~45s). Please wait a moment and try again.'
+      );
+    }
+    throw err;
+  }
 
   if (response.status === 401) {
     localStorage.removeItem('token');
@@ -57,6 +67,8 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 export const api = {
   // Auth
   login: (data: any) => request<any>('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+  adminLogin: (data: { username: string; password: string }) =>
+    request<any>('/auth/admin/login', { method: 'POST', body: JSON.stringify(data) }),
   register: (data: any) => request<any>('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
   getMe: () => request<any>('/auth/me'),
   updateProfile: (data: any) => request<any>('/auth/me', { method: 'PUT', body: JSON.stringify(data) }),

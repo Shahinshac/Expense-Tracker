@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.get("/stats", response_model=AdminStatsResponse)
 def get_user_stats(
-    current_admin: User = Depends(get_current_admin_user),
+    current_admin: Any = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
     """Return user counts by status for the admin dashboard header."""
@@ -33,7 +33,7 @@ def get_user_stats(
 def list_users(
     status_filter: Optional[str] = Query(None, alias="status", pattern="^(PENDING|APPROVED|REJECTED|DISABLED)$"),
     search: Optional[str] = Query(None),
-    current_admin: User = Depends(get_current_admin_user),
+    current_admin: Any = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -54,7 +54,7 @@ def list_users(
 @router.get("/users/{user_id}", response_model=AdminUserResponse)
 def get_user(
     user_id: int,
-    current_admin: User = Depends(get_current_admin_user),
+    current_admin: Any = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
     """Retrieve a single user's safe public profile for administrative review."""
@@ -67,7 +67,7 @@ def get_user(
 @router.post("/users/{user_id}/approve", response_model=AdminUserResponse)
 def approve_user(
     user_id: int,
-    current_admin: User = Depends(get_current_admin_user),
+    current_admin: Any = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
     """Approve a pending or rejected user registration."""
@@ -84,7 +84,7 @@ def approve_user(
 @router.post("/users/{user_id}/reject", response_model=AdminUserResponse)
 def reject_user(
     user_id: int,
-    current_admin: User = Depends(get_current_admin_user),
+    current_admin: Any = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
     """Reject a pending registration."""
@@ -103,7 +103,7 @@ def reject_user(
 @router.post("/users/{user_id}/disable", response_model=AdminUserResponse)
 def disable_user(
     user_id: int,
-    current_admin: User = Depends(get_current_admin_user),
+    current_admin: Any = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
     """Disable an active user account."""
@@ -122,7 +122,7 @@ def disable_user(
 @router.post("/users/{user_id}/enable", response_model=AdminUserResponse)
 def enable_user(
     user_id: int,
-    current_admin: User = Depends(get_current_admin_user),
+    current_admin: Any = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
     """Re-enable a disabled user account."""
@@ -139,7 +139,7 @@ def enable_user(
 @router.delete("/users/{user_id}")
 def delete_user(
     user_id: int,
-    current_admin: User = Depends(get_current_admin_user),
+    current_admin: Any = Depends(get_current_admin_user),
     db: Session = Depends(get_db)
 ):
     """Delete a user account and associated records."""

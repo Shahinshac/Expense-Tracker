@@ -13,6 +13,10 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class AdminLogin(BaseModel):
+    username: str
+    password: str
+
 class UserResponse(BaseModel):
     id: int
     email: EmailStr
