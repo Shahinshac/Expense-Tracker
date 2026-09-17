@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   LayoutDashboard, Receipt, PieChart, Calendar, Wallet,
   Target, Repeat, ArrowDownLeft, Database, Settings,
-  LogOut, Plus, Moon, Sun, Menu, X, ChevronRight, Tag, ShieldCheck
+  LogOut, Plus, Moon, Sun, Menu, X, ChevronRight, Tag
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -131,27 +131,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
               })}
             </nav>
           </div>
-
-          {user?.is_admin && (
-            <div>
-              <div className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-amber-500 dark:text-amber-400">
-                Administration
-              </div>
-              <nav className="space-y-1">
-                <button
-                  onClick={() => setCurrentTab('admin')}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    currentTab === 'admin'
-                      ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 font-semibold'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-200'
-                  }`}
-                >
-                  <ShieldCheck className={`w-4 h-4 ${currentTab === 'admin' ? 'text-amber-600 dark:text-amber-400' : 'text-amber-500'}`} />
-                  <span>Admin Panel</span>
-                </button>
-              </nav>
-            </div>
-          )}
         </div>
 
         {/* Add to Home Screen / Install App Banner */}
@@ -311,7 +290,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                   { id: 'savings', label: 'Savings', icon: Target },
                   { id: 'backup', label: 'Export/Backup', icon: Database },
                   { id: 'settings', label: 'Settings', icon: Settings },
-                  ...(user?.is_admin ? [{ id: 'admin', label: 'Admin Panel', icon: ShieldCheck }] : []),
                 ].map((item) => {
                   const Icon = item.icon;
                   return (

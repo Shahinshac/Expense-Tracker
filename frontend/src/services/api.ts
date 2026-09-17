@@ -39,10 +39,22 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   }
 
   if (response.status === 401) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.dispatchEvent(new Event('auth:unauthorized'));
-    throw new Error('Session expired. Please log in again.');
+    let errorDetail = 'Incorrect email or password.';
+    try {
+      const errJson = await response.json();
+      errorDetail = errJson.detail || errJson.message || errorDetail;
+    } catch {
+      // response was not JSON
+    }
+
+    // Only dispatch auth:unauthorized and clear token if on an authenticated endpoint, not during login
+    if (!endpoint.includes('/auth/login') && !endpoint.includes('/auth/admin/login')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.dispatchEvent(new Event('auth:unauthorized'));
+      throw new Error('Session expired. Please log in again.');
+    }
+    throw new Error(errorDetail);
   }
 
   if (!response.ok) {

@@ -77,6 +77,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    if (window.location.pathname === '/admin' || window.location.pathname === '/admin/login') {
+      window.history.pushState(null, '', '/');
+      window.dispatchEvent(new Event('popstate'));
+    }
   };
 
   const refreshUser = async () => {
