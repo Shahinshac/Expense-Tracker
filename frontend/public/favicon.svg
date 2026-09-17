@@ -1,21 +1,32 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <defs>
-    <linearGradient id="finGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#110852"/>
-      <stop offset="50%" stop-color="#220b6f"/>
-      <stop offset="100%" stop-color="#3b1386"/>
+    <linearGradient id="fintechGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0f0744"/>
+      <stop offset="60%" stop-color="#21096e"/>
+      <stop offset="100%" stop-color="#3f1388"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="116" fill="url(#finGrad)"/>
-  <!-- Graduation Cap -->
-  <path d="M256 120 L416 195 L256 270 L96 195 Z" fill="none" stroke="#ffffff" stroke-width="22" stroke-linejoin="round"/>
-  <path d="M168 228 V290 C168 322 256 350 256 350 C256 350 344 322 344 290 V228" fill="none" stroke="#ffffff" stroke-width="20" stroke-linejoin="round" stroke-linecap="round"/>
-  <path d="M386 210 V312" stroke="#ffffff" stroke-width="16" stroke-linecap="round"/>
-  <polygon points="376,310 396,310 386,340" fill="#ffffff"/>
-  <!-- Wallet / Payment Card Motif -->
-  <rect x="136" y="244" width="240" height="156" rx="24" fill="none" stroke="#ffffff" stroke-width="22"/>
-  <!-- Chip Detail -->
-  <rect x="170" y="286" width="36" height="28" rx="6" fill="none" stroke="#ffffff" stroke-width="14"/>
-  <!-- Bottom Stripe -->
-  <line x1="170" y1="352" x2="280" y2="352" stroke="#ffffff" stroke-width="14" stroke-linecap="round"/>
+  <rect width="512" height="512" rx="116" fill="url(#fintechGrad)"/>
+  
+  <!-- Credit Card (Behind Wallet) -->
+  <g transform="translate(196, 128) rotate(22)">
+    <rect x="0" y="0" width="180" height="110" rx="18" fill="#ffffff"/>
+    <rect x="0" y="24" width="180" height="24" fill="url(#fintechGrad)"/>
+    <rect x="18" y="62" width="28" height="22" rx="5" fill="#21096e"/>
+  </g>
+
+  <!-- Wallet Body -->
+  <rect x="140" y="200" width="232" height="176" rx="28" fill="#ffffff"/>
+  <rect x="156" y="216" width="200" height="144" rx="20" fill="url(#fintechGrad)"/>
+
+  <!-- Inner Wallet Layer -->
+  <rect x="168" y="228" width="176" height="120" rx="16" fill="#ffffff"/>
+
+  <!-- Wallet Clasp / Tab -->
+  <path d="M304 266 H348 C360 266 370 276 370 288 C370 300 360 310 348 310 H304 Z" fill="url(#fintechGrad)"/>
+  <circle cx="344" cy="288" r="8" fill="#ffffff"/>
+
+  <!-- Upward Transaction / Expense Arrow -->
+  <path d="M190 286 C215 286 248 266 268 232" fill="none" stroke="url(#fintechGrad)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M250 216 L284 220 L274 254 Z" fill="url(#fintechGrad)"/>
 </svg>
