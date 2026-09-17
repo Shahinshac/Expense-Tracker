@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Check, Upload, Loader2, Sparkles } from 'lucide-react';
+import { X, Check, Upload, Loader2, Receipt } from 'lucide-react';
 import { Category, Account } from '../../types';
 import { rupeesToPaise, getCategoryIconComponent } from '../../utils/formatters';
 import { api } from '../../services/api';
@@ -23,6 +23,9 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   const { showToast } = useToast();
   const amountInputRef = useRef<HTMLInputElement>(null);
 
+  const [localCategories, setLocalCategories] = useState<Category[]>(categories || []);
+  const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(false);
+
   const [amountStr, setAmountStr] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
@@ -36,15 +39,18 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMoreDetails, setShowMoreDetails] = useState(false);
 
-  // Set default category when categories load
+  // Synchronize categories from props
   useEffect(() => {
-    if (categories.length > 0 && !selectedCategoryId) {
-      const foodCat = categories.find((c) => c.name.toLowerCase() === 'food');
-      setSelectedCategoryId(foodCat ? foodCat.id : categories[0].id);
+    if (categories && categories.length > 0) {
+      setLocalCategories(categories);
+      if (!selectedCategoryId) {
+        const foodCat = categories.find((c) => c.name.toLowerCase() === 'food');
+        setSelectedCategoryId(foodCat ? foodCat.id : categories[0].id);
+      }
     }
-  }, [categories, selectedCategoryId]);
+  }, [categories]);
 
-  // Focus amount input when opened
+  // Ensure categories are loaded when modal is opened (fallback to API if parent categories are empty)
   useEffect(() => {
     if (isOpen) {
       setAmountStr('');
@@ -54,6 +60,27 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       setShowMoreDetails(false);
       setDateStr(new Date().toISOString().split('T')[0]);
       setTimeStr(new Date().toTimeString().slice(0, 5));
+
+      if (!localCategories || localCategories.length === 0) {
+        setIsLoadingCategories(true);
+        api.getCategories()
+          .then((cats) => {
+            if (cats && Array.isArray(cats)) {
+              setLocalCategories(cats);
+              if (cats.length > 0 && !selectedCategoryId) {
+                const foodCat = cats.find((c) => c.name.toLowerCase() === 'food');
+                setSelectedCategoryId(foodCat ? foodCat.id : cats[0].id);
+              }
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to load categories in modal:', err);
+          })
+          .finally(() => {
+            setIsLoadingCategories(false);
+          });
+      }
+
       setTimeout(() => {
         amountInputRef.current?.focus();
       }, 100);
@@ -104,7 +131,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
       const paise = rupeesToPaise(amountVal);
 
       // Auto-populate description if empty based on category
-      const activeCat = categories.find((c) => c.id === selectedCategoryId);
+      const activeCat = localCategories.find((c) => c.id === selectedCategoryId);
       const desc = description.trim() || activeCat?.name || 'Expense';
 
       await api.createExpense({
@@ -129,6 +156,8 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
     }
   };
 
+  const activeCategory = localCategories.find((c) => c.id === selectedCategoryId);
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in duration-150">
       <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-t-3xl md:rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh] animate-in slide-in-from-bottom duration-200">
@@ -136,7 +165,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-              <Sparkles className="w-4 h-4" />
+              <Receipt className="w-4 h-4" />
             </div>
             <h2 className="font-bold text-lg text-slate-900 dark:text-white">Add Expense</h2>
           </div>
@@ -150,7 +179,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
 
         {/* Scrollable Form Body */}
         <form onSubmit={handleSubmit} className="p-5 overflow-y-auto space-y-4">
-          {/* BIG AMOUNT INPUT */}
+          {/* AMOUNT INPUT */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
               Amount
@@ -164,15 +193,15 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
                 type="number"
                 step="any"
                 min="0.01"
-                placeholder="0"
+                placeholder="Enter amount"
                 value={amountStr}
                 onChange={(e) => setAmountStr(e.target.value)}
-                className="w-full text-3xl font-extrabold text-slate-900 dark:text-white bg-transparent px-2 py-1 outline-none tracking-tight"
+                className="w-full text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white bg-transparent px-2 py-1 outline-none tracking-tight placeholder:text-slate-400 placeholder:text-lg sm:placeholder:text-2xl placeholder:font-normal"
                 required
               />
             </div>
 
-            {/* Quick chips: +10, +50, +100, +500 */}
+            {/* Quick chips */}
             <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto pb-1 no-scrollbar">
               {quickAmounts.map((q) => (
                 <button
@@ -193,40 +222,59 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Category
               </label>
-              <span className="text-[11px] text-slate-400">
-                {categories.find((c) => c.id === selectedCategoryId)?.group || ''}
-              </span>
+              {activeCategory && (
+                <span className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+                  {activeCategory.name}
+                </span>
+              )}
             </div>
-            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-40 overflow-y-auto p-1 bg-slate-50/50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
-              {categories.map((cat) => {
-                const IconComponent = getCategoryIconComponent(cat.icon);
-                const isSelected = selectedCategoryId === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setSelectedCategoryId(cat.id)}
-                    className={`flex flex-col items-center justify-center p-2 rounded-xl text-center transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-[1.03]'
-                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200/50 dark:border-slate-700/50'
-                    }`}
-                  >
-                    <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center mb-1 ${
-                        isSelected ? 'bg-white/20' : ''
+
+            {isLoadingCategories ? (
+              <div className="flex items-center justify-center p-8 bg-slate-50/50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-indigo-600 dark:text-indigo-400" />
+                <span className="text-xs text-slate-400 font-medium">Loading categories...</span>
+              </div>
+            ) : localCategories.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50/50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800 text-xs text-slate-400">
+                No categories available
+              </div>
+            ) : (
+              <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-48 overflow-y-auto p-1.5 bg-slate-50/50 dark:bg-slate-800/40 rounded-2xl border border-slate-100 dark:border-slate-800">
+                {localCategories.map((cat) => {
+                  const IconComponent = getCategoryIconComponent(cat.icon);
+                  const isSelected = selectedCategoryId === cat.id;
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => setSelectedCategoryId(cat.id)}
+                      className={`relative flex flex-col items-center justify-center p-2 rounded-xl text-center transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-[1.03] ring-2 ring-indigo-500'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/60 border border-slate-200/50 dark:border-slate-700/50'
                       }`}
-                      style={{ color: isSelected ? 'white' : cat.color }}
                     >
-                      <IconComponent className="w-4 h-4" />
-                    </div>
-                    <span className="text-[10px] font-medium leading-tight truncate w-full">
-                      {cat.name}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                      {isSelected && (
+                        <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-white text-indigo-600 flex items-center justify-center shadow-xs">
+                          <Check className="w-2.5 h-2.5 stroke-[3]" />
+                        </div>
+                      )}
+                      <div
+                        className={`w-7 h-7 rounded-lg flex items-center justify-center mb-1 ${
+                          isSelected ? 'bg-white/20' : ''
+                        }`}
+                        style={{ color: isSelected ? 'white' : cat.color }}
+                      >
+                        <IconComponent className="w-4 h-4" />
+                      </div>
+                      <span className="text-[10px] font-semibold leading-tight truncate w-full">
+                        {cat.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* PAYMENT METHOD */}
@@ -255,17 +303,17 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
             </div>
           </div>
 
-          {/* DESCRIPTION / NOTE */}
+          {/* DESCRIPTION */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-              Description / What was this for?
+              Description
             </label>
             <input
               type="text"
-              placeholder="e.g. Lunch thali, Petrol, Xerox printing..."
+              placeholder="Enter a description (optional)"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full text-sm rounded-xl px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all"
+              className="w-full text-sm rounded-xl px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800/80 text-slate-900 dark:text-white border border-transparent focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-900 outline-none transition-all placeholder:text-slate-400"
             />
           </div>
 
@@ -312,7 +360,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               {accounts.length > 0 && (
                 <div>
                   <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-                    Deduct From Wallet / Account (Optional)
+                    Deduct From Account (Optional)
                   </label>
                   <select
                     value={selectedAccountId || ''}
@@ -332,14 +380,14 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
               {/* Note */}
               <div>
                 <label className="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">
-                  Detailed Note
+                  Note
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="e.g. Printed 85 pages for S5 project record..."
+                  placeholder="Enter notes (optional)"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  className="w-full text-xs rounded-xl px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white outline-none"
+                  className="w-full text-xs rounded-xl px-3 py-2 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white outline-none placeholder:text-slate-400"
                 />
               </div>
 

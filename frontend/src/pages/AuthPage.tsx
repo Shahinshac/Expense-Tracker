@@ -256,8 +256,8 @@ export const AuthPage: React.FC = () => {
             <div className="text-[10px] text-slate-400">Quick rupee chips</div>
           </div>
           <div className="p-2">
-            <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">College Groups</div>
-            <div className="text-[10px] text-slate-400">Xerox, canteen, fees</div>
+            <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Smart Budgets</div>
+            <div className="text-[10px] text-slate-400">Track spending limits</div>
           </div>
           <div className="p-2">
             <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">100% Private</div>
