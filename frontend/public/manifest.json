@@ -1,26 +1,61 @@
 {
+  "id": "/",
   "short_name": "FinStudent",
   "name": "FinStudent • Personal Student Expense Tracker",
   "description": "Fast, mobile-first personal expense tracker for students to record, manage, and analyze daily expenses.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "categories": ["finance", "education", "productivity"],
   "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/maskable-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
     {
       "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/favicon.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
       "purpose": "any"
     }
   ],
-  "start_url": "/",
-  "scope": "/",
-  "background_color": "#0f172a",
-  "theme_color": "#4f46e5",
-  "display": "standalone",
-  "orientation": "portrait-primary",
-  "categories": ["finance", "education", "productivity"]
+  "shortcuts": [
+    {
+      "name": "Add Expense",
+      "short_name": "Add",
+      "description": "Quickly record a new expense",
+      "url": "/?action=add-expense",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Expense History",
+      "short_name": "History",
+      "description": "View all recorded transactions",
+      "url": "/?tab=expenses",
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192" }]
+    }
+  ]
 }

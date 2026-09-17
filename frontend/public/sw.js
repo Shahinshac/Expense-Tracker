@@ -1,10 +1,15 @@
 // FinStudent Service Worker
-const CACHE_NAME = 'finstudent-cache-v1';
+const CACHE_NAME = 'finstudent-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/favicon.svg',
+  '/favicon-64.png',
+  '/pwa-192x192.png',
+  '/pwa-512x512.png',
+  '/maskable-icon-512x512.png',
+  '/apple-touch-icon.png',
   '/icons.svg'
 ];
 

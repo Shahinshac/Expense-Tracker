@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { PwaInstallPrompt } from '../common/PwaInstallPrompt';
 
 interface AppLayoutProps {
   currentTab: string;
@@ -54,9 +55,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         {/* Brand Header */}
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
-              <Receipt className="w-5 h-5" />
-            </div>
+            <img
+              src="/pwa-192x192.png"
+              alt="FinStudent"
+              className="w-10 h-10 rounded-xl shadow-md shadow-indigo-500/20 object-cover"
+            />
             <div>
               <h1 className="font-bold text-base tracking-tight text-slate-900 dark:text-white leading-none">FinStudent</h1>
               <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">Student Expense Tracker</span>
@@ -130,6 +133,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           </div>
         </div>
 
+        {/* Add to Home Screen / Install App Banner */}
+        <div className="px-3 pb-2">
+          <PwaInstallPrompt compact={true} />
+        </div>
+
         {/* User Profile Footer */}
         <div className="p-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2.5 overflow-hidden">
@@ -165,9 +173,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         {/* MOBILE TOP BAR */}
         <header className="md:hidden sticky top-0 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm">
-              <Receipt className="w-4 h-4" />
-            </div>
+            <img
+              src="/pwa-192x192.png"
+              alt="FinStudent"
+              className="w-8 h-8 rounded-lg shadow-sm object-cover"
+            />
             <div>
               <span className="font-bold text-sm tracking-tight text-slate-900 dark:text-white">FinStudent</span>
             </div>
@@ -262,6 +272,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
                 >
                   <X className="w-5 h-5" />
                 </button>
+              </div>
+
+              {/* Mobile Install App / Add to Home Screen Banner */}
+              <div className="mb-3">
+                <PwaInstallPrompt compact={true} />
               </div>
 
               <div className="grid grid-cols-3 gap-3 py-2">

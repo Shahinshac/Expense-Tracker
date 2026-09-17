@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../context/ToastContext';
 import { api } from '../services/api';
+import { PwaInstallPrompt } from '../components/common/PwaInstallPrompt';
 
 export const SettingsPage: React.FC = () => {
   const { user, logout, updateProfile } = useAuth();
@@ -93,6 +94,9 @@ export const SettingsPage: React.FC = () => {
           Manage your college student profile, theme, shortcuts, and data backups
         </p>
       </div>
+
+      {/* ADD TO HOME SCREEN / APP INSTALLATION CARD */}
+      <PwaInstallPrompt />
 
       {/* PROFILE SETTINGS */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs space-y-4">
