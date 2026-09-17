@@ -1,0 +1,26 @@
+{
+  "short_name": "FinStudent",
+  "name": "FinStudent • Personal Student Expense Tracker",
+  "description": "Fast, mobile-first personal expense tracker for students to record, manage, and analyze daily expenses.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "start_url": "/",
+  "scope": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "categories": ["finance", "education", "productivity"]
+}
