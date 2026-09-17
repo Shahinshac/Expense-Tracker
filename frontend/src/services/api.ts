@@ -1,4 +1,8 @@
-const RAW_API_URL = (import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
+let cleanApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+if (cleanApiUrl.endsWith('/api/v1')) {
+  cleanApiUrl = cleanApiUrl.replace(/\/api\/v1$/, '');
+}
+const RAW_API_URL = cleanApiUrl;
 const API_BASE = RAW_API_URL ? `${RAW_API_URL}/api/v1` : '/api/v1';
 
 export function getAttachmentUrl(url?: string | null): string {

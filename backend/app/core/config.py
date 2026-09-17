@@ -1,7 +1,7 @@
 import os
-from typing import List, Optional
+from typing import List, Optional, Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
+from pydantic import field_validator, ValidationInfo
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Student Personal Expense Tracker"
@@ -41,14 +41,21 @@ class Settings(BaseSettings):
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="after")
     @classmethod
-    def assemble_cors_origins(cls, v: List[str], info) -> List[str]:
-        frontend_url = os.getenv("FRONTEND_URL")
+    def assemble_cors_origins(cls, v: List[str], info: ValidationInfo) -> List[str]:
         origins = list(v)
+        frontend_url = os.getenv("FRONTEND_URL")
+        if not frontend_url and info and info.data:
+            frontend_url = info.data.get("FRONTEND_URL")
+            
         if frontend_url:
             for url in frontend_url.split(","):
                 clean = url.strip()
-                if clean and clean not in origins:
-                    origins.append(clean)
+                if clean:
+                    clean_no_slash = clean.rstrip("/")
+                    if clean_no_slash and clean_no_slash not in origins:
+                        origins.append(clean_no_slash)
+                    if clean not in origins:
+                        origins.append(clean)
         return origins
 
     model_config = SettingsConfigDict(

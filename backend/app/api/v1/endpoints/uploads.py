@@ -62,14 +62,17 @@ async def upload_file(
                     file_url = f"{settings.SUPABASE_URL.rstrip('/')}/storage/v1/object/public/{settings.SUPABASE_STORAGE_BUCKET}/{supabase_path}"
                     storage_path = supabase_path
                 else:
-                    # Log warning and fall back to local disk storage
-                    print(f"[Supabase Storage Warning] Status {res.status_code}: {res.text}. Falling back to local disk.")
-                    with open(storage_path, "wb") as f:
-                        f.write(content)
+                    raise HTTPException(
+                        status_code=status.HTTP_502_BAD_GATEWAY,
+                        detail=f"Failed to upload receipt to Supabase Storage: {res.text}"
+                    )
+        except HTTPException:
+            raise
         except Exception as e:
-            print(f"[Supabase Storage Error] {e}. Falling back to local disk.")
-            with open(storage_path, "wb") as f:
-                f.write(content)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=f"Error connecting to Supabase Storage: {str(e)}"
+            )
     else:
         # Local file storage
         with open(storage_path, "wb") as f:

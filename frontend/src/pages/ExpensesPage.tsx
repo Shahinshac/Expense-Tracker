@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { Expense, Category, Account } from '../types';
 import { formatPaise, formatDateRelative, getCategoryIconComponent } from '../utils/formatters';
-import { api } from '../services/api';
+import { api, getAttachmentUrl } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { EmptyState } from '../components/common/EmptyState';
 import { ConfirmModal } from '../components/common/ConfirmModal';
@@ -434,7 +434,7 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({
             </div>
             <div className="max-h-[70vh] overflow-auto flex items-center justify-center">
               <img
-                src={viewingReceiptUrl}
+                src={getAttachmentUrl(viewingReceiptUrl)}
                 alt="Receipt"
                 className="max-w-full rounded-xl object-contain"
               />
