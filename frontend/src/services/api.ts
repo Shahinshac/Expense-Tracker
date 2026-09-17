@@ -1,3 +1,5 @@
+import type { AdminUser, AdminStats, RegisterResponse } from '../types';
+
 let cleanApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
 if (cleanApiUrl.endsWith('/api/v1')) {
   cleanApiUrl = cleanApiUrl.replace(/\/api\/v1$/, '');
@@ -174,6 +176,19 @@ export const api = {
     );
   },
 
-  deleteReceipt: (id: number) => request<{ message: string; id: number }>(`/uploads/${id}`, { method: 'DELETE' })
+  deleteReceipt: (id: number) => request<{ message: string; id: number }>(`/uploads/${id}`, { method: 'DELETE' }),
+
+  // Admin
+  getAdminStats: () => request<AdminStats>('/admin/stats'),
+  getAdminUsers: (status?: string) => {
+    const q = status && status !== 'ALL' ? `?status=${encodeURIComponent(status)}` : '';
+    return request<AdminUser[]>(`/admin/users${q}`);
+  },
+  getAdminUser: (id: number) => request<AdminUser>(`/admin/users/${id}`),
+  approveUser: (id: number) => request<AdminUser>(`/admin/users/${id}/approve`, { method: 'POST' }),
+  rejectUser: (id: number) => request<AdminUser>(`/admin/users/${id}/reject`, { method: 'POST' }),
+  disableUser: (id: number) => request<AdminUser>(`/admin/users/${id}/disable`, { method: 'POST' }),
+  enableUser: (id: number) => request<AdminUser>(`/admin/users/${id}/enable`, { method: 'POST' }),
+  deleteUser: (id: number) => request<{ message: string; id: number }>(`/admin/users/${id}`, { method: 'DELETE' })
 };
 

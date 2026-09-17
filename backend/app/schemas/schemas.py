@@ -18,14 +18,42 @@ class UserResponse(BaseModel):
     email: EmailStr
     full_name: str
     currency: str
+    status: str = "PENDING"
+    is_admin: bool = False
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class RegisterResponse(BaseModel):
+    message: str
+    status: str
+    email: EmailStr
+    id: int
+
+class AdminUserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    full_name: str
+    currency: str
+    status: str
+    is_admin: bool
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class AdminStatsResponse(BaseModel):
+    total_users: int
+    pending_users: int
+    approved_users: int
+    rejected_users: int
+    disabled_users: int
 
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
 
 
 # --- CATEGORY ---

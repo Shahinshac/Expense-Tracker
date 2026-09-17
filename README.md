@@ -233,10 +233,36 @@ Install FinStudent as a native app on your phone:
 | `SUPABASE_KEY` | Backend | Supabase service/anon key (Keep server-side only!) | `eyJhbGciOi...` |
 | `SUPABASE_STORAGE_BUCKET` | Backend | Storage bucket for receipt files | `receipts` |
 | `MAX_UPLOAD_SIZE_MB` | Backend | Maximum allowed receipt size | `5` |
+| `ADMIN_EMAIL` | Backend | Email of owner/initial administrator (auto-granted `is_admin=True` and `status=APPROVED`) | `owner@example.com` |
+| `MAX_USERS` | Backend | Maximum allowed registered users before registration closes (Optional free-tier guard) | `20` |
 | `VITE_API_URL` | Frontend | Deployed backend API domain | `https://finstudent-api.onrender.com` |
 
 > [!CAUTION]
-> **Never commit your Supabase Service Role Key or database password to GitHub.** Always use environment variables in Render and Vercel dashboards.
+> **Never commit your Supabase Service Role Key, JWT Secret, or database password to GitHub.** Always configure secrets via the Render and Vercel environment dashboards.
+
+---
+
+## 🛡️ Admin Approval & User Registration Workflow
+
+To keep this personal instance secure and prevent unauthorized usage on free-tier infrastructure:
+
+1. **Registration Status**: When a new user registers, their account status is set to `PENDING`. They are **NOT** issued a JWT session.
+2. **Login Protection**: Attempts to log in while `PENDING`, `REJECTED`, or `DISABLED` are blocked server-side with HTTP 403.
+3. **Admin Bootstrap (`ADMIN_EMAIL`)**:
+   - Set `ADMIN_EMAIL=your-email@example.com` in your backend environment variables (e.g. Render Dashboard).
+   - When you log in with this email, the backend ensures your account is `is_admin=True` and `status='APPROVED'`.
+4. **Admin Dashboard (`/admin`)**:
+   - Only users with `is_admin: true` can access the Admin Panel (via desktop sidebar or mobile more sheet).
+   - Direct navigation to `/admin` validates server-side token privileges.
+   - Actions available:
+     - **Pending Users**: Approve or Reject.
+     - **Approved Users**: Disable account.
+     - **Rejected/Disabled Users**: Re-approve/Enable or permanently Delete.
+   - Accidental operations are protected with modal confirmation dialogues.
+   - Admins cannot disable or delete their own active account.
+5. **Free-Tier Protection (`MAX_USERS`)**:
+   - Optional environment variable (e.g. `MAX_USERS=20`).
+   - If user count reaches the ceiling, further registrations are blocked with: *"Registration is currently closed because the maximum number of users has been reached."*
 
 ---
 

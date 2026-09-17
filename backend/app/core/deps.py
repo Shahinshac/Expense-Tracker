@@ -30,4 +30,39 @@ def get_current_user(
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
         raise credentials_exception
+
+    # Enforce account approval status
+    if user.status != "APPROVED":
+        if user.status == "PENDING":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account is awaiting administrator approval."
+            )
+        elif user.status == "REJECTED":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your registration request was rejected."
+            )
+        elif user.status == "DISABLED":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account has been disabled."
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account access denied."
+            )
+
     return user
+
+def get_current_admin_user(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """Dependency that strictly verifies the requesting user is an active administrator."""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrative privileges required."
+        )
+    return current_user

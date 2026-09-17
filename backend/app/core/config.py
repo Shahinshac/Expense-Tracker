@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     SUPABASE_KEY: Optional[str] = os.getenv("SUPABASE_KEY", os.getenv("SUPABASE_SERVICE_ROLE_KEY", None))
     SUPABASE_STORAGE_BUCKET: str = os.getenv("SUPABASE_STORAGE_BUCKET", "receipts")
 
+    # Admin & User Registration Safeguards
+    ADMIN_EMAIL: Optional[str] = os.getenv("ADMIN_EMAIL", None)
+    MAX_USERS: Optional[int] = int(os.getenv("MAX_USERS")) if os.getenv("MAX_USERS") and os.getenv("MAX_USERS").strip().isdigit() else None
+
+
     # Uploads (Local fallback & size limits)
     UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "uploads")
     MAX_UPLOAD_SIZE_MB: int = 5

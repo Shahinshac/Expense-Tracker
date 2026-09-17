@@ -1,8 +1,8 @@
 import datetime
 import pytest
 
-def test_auth_and_profile(client):
-    # Register
+def test_auth_and_profile(client, db_session):
+    # Register (status is PENDING, no token)
     res = client.post("/api/v1/auth/register", json={
         "email": "priya@college.edu",
         "password": "strongpassword123",
@@ -11,15 +11,37 @@ def test_auth_and_profile(client):
     })
     assert res.status_code == 201
     data = res.json()
-    assert "access_token" in data
-    assert data["user"]["full_name"] == "Priya Patel"
-    token = data["access_token"]
+    assert data["status"] == "PENDING"
+    assert "waiting for administrator approval" in data["message"]
+
+    # Pending user cannot login
+    login_fail = client.post("/api/v1/auth/login", json={
+        "email": "priya@college.edu",
+        "password": "strongpassword123"
+    })
+    assert login_fail.status_code == 403
+
+    # Approve user
+    from app.models.models import User
+    u = db_session.query(User).filter(User.email == "priya@college.edu").first()
+    u.status = "APPROVED"
+    db_session.commit()
+
+    # Approved user logs in
+    login_ok = client.post("/api/v1/auth/login", json={
+        "email": "priya@college.edu",
+        "password": "strongpassword123"
+    })
+    assert login_ok.status_code == 200
+    token = login_ok.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
 
     # Profile
     me_res = client.get("/api/v1/auth/me", headers=headers)
     assert me_res.status_code == 200
     assert me_res.json()["email"] == "priya@college.edu"
+    assert me_res.json()["status"] == "APPROVED"
+
 
 def test_default_categories_and_accounts(client, auth_headers):
     # Categories

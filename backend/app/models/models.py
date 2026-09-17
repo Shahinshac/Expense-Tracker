@@ -16,6 +16,8 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
     currency = Column(String(10), default="INR", nullable=False)
+    status = Column(String(20), default="PENDING", nullable=False) # PENDING, APPROVED, REJECTED, DISABLED
+    is_admin = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), default=utcnow)
     updated_at = Column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
@@ -26,6 +28,8 @@ class User(Base):
     budgets = relationship("Budget", back_populates="user", cascade="all, delete-orphan")
     recurring_expenses = relationship("RecurringExpense", back_populates="user", cascade="all, delete-orphan")
     savings_goals = relationship("SavingsGoal", back_populates="user", cascade="all, delete-orphan")
+    attachments = relationship("Attachment", cascade="all, delete-orphan")
+
 
 
 class Category(Base):

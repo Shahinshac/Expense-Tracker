@@ -15,14 +15,20 @@ import { AccountsPage } from './pages/AccountsPage';
 import { RecurringPage } from './pages/RecurringPage';
 import { SavingsPage } from './pages/SavingsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { AdminPage } from './pages/AdminPage';
 import { QuickAddModal } from './components/expenses/QuickAddModal';
 import { Category, Account, Expense } from './types';
 import { api } from './services/api';
 
 const MainApp: React.FC = () => {
-  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    if (window.location.pathname === '/admin' || window.location.hash === '#admin') {
+      return 'admin';
+    }
+    return 'dashboard';
+  });
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
@@ -78,10 +84,19 @@ const MainApp: React.FC = () => {
     return <AuthPage />;
   }
 
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (tab === 'admin') {
+      window.history.pushState(null, '', '/admin');
+    } else if (window.location.pathname === '/admin') {
+      window.history.pushState(null, '', '/');
+    }
+  };
+
   return (
     <AppLayout
       currentTab={activeTab}
-      setCurrentTab={(tab: string) => setActiveTab(tab)}
+      setCurrentTab={handleTabChange}
       onOpenQuickAdd={() => setIsQuickAddOpen(true)}
     >
       {activeTab === 'dashboard' && (
@@ -89,9 +104,9 @@ const MainApp: React.FC = () => {
           onOpenQuickAdd={() => setIsQuickAddOpen(true)}
           onSelectExpense={(exp) => {
             setSelectedExpenseForEdit(exp);
-            setActiveTab('expenses');
+            handleTabChange('expenses');
           }}
-          onNavigate={(tab) => setActiveTab(tab)}
+          onNavigate={handleTabChange}
         />
       )}
 
@@ -148,6 +163,10 @@ const MainApp: React.FC = () => {
 
       {activeTab === 'settings' && (
         <SettingsPage />
+      )}
+
+      {activeTab === 'admin' && (
+        <AdminPage />
       )}
 
       {/* QUICK ADD MODAL (GLOBAL) */}

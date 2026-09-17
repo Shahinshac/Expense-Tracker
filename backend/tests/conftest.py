@@ -55,15 +55,33 @@ def client(db_session):
         yield test_client
     app.dependency_overrides.clear()
 
+def create_approved_user(client: TestClient, db_session, email: str, password: str, full_name: str = "Test User", currency: str = "INR", is_admin: bool = False):
+    """Helper to create and approve a user for functional flow tests."""
+    reg_data = {
+        "email": email,
+        "password": password,
+        "full_name": full_name,
+        "currency": currency
+    }
+    client.post("/api/v1/auth/register", json=reg_data)
+    user = db_session.query(User).filter(User.email == email.lower()).first()
+    if user:
+        user.status = "APPROVED"
+        if is_admin:
+            user.is_admin = True
+        db_session.commit()
+    login_res = client.post("/api/v1/auth/login", json={"email": email, "password": password})
+    return login_res.json()
+
 @pytest.fixture
 def auth_headers(client, db_session):
-    # Register test student
-    reg_data = {
-        "email": "student@college.edu",
-        "password": "collegesecret123",
-        "full_name": "Rahul Sharma",
-        "currency": "INR"
-    }
-    response = client.post("/api/v1/auth/register", json=reg_data)
-    token = response.json()["access_token"]
+    # Register and approve test student
+    auth_data = create_approved_user(
+        client, db_session,
+        email="student@college.edu",
+        password="collegesecret123",
+        full_name="Rahul Sharma",
+        currency="INR"
+    )
+    token = auth_data["access_token"]
     return {"Authorization": f"Bearer {token}"}

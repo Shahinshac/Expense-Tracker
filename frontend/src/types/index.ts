@@ -6,6 +6,8 @@ export interface User {
   college_name?: string;
   course?: string;
   month_starts_on_day?: number;
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISABLED' | string;
+  is_admin?: boolean;
   created_at: string;
 }
 
@@ -198,4 +200,31 @@ export interface CalendarResponse {
     total_spent_paise: number;
     transaction_count: number;
   }>;
+}
+
+export interface RegisterResponse {
+  message: string;
+  status: string;
+  email: string;
+  id: number;
+}
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  full_name: string;
+  currency: string;
+  college_name?: string;
+  course?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'DISABLED' | string;
+  is_admin: boolean;
+  created_at: string;
+}
+
+export interface AdminStats {
+  total_users: number;
+  pending_users: number;
+  approved_users: number;
+  rejected_users: number;
+  disabled_users: number;
 }
