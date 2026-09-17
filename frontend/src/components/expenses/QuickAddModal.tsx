@@ -76,7 +76,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
     try {
       setIsUploading(true);
       const res = await api.uploadReceipt(file);
-      setAttachmentUrl(res.file_url);
+      setAttachmentUrl(res.file_path || res.file_url);
       showToast('Receipt attached successfully');
     } catch (err: any) {
       showToast(err.message || 'Failed to upload receipt', 'error');

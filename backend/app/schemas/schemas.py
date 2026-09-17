@@ -350,3 +350,21 @@ class BackupData(BaseModel):
 class RestoreRequest(BaseModel):
     mode: str = "replace" # "replace" or "merge"
     data: BackupData
+
+# --- ATTACHMENT & UPLOADS ---
+class UploadResponse(BaseModel):
+    id: int
+    file_name: str
+    file_path: str
+    file_url: str
+    signed_url: Optional[str] = None
+    expires_in: Optional[int] = None
+    file_size: int
+    mime_type: str
+
+class SignedUrlResponse(BaseModel):
+    signed_url: str
+    expires_in: int
+    file_path: str
+    attachment_id: Optional[int] = None
+

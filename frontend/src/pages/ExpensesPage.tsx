@@ -44,6 +44,19 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [viewingReceiptUrl, setViewingReceiptUrl] = useState<string | null>(null);
+  const [isLoadingReceipt, setIsLoadingReceipt] = useState(false);
+
+  const handleViewReceipt = async (attachmentUrl: string) => {
+    try {
+      setIsLoadingReceipt(true);
+      const res = await api.getReceiptSignedUrl(attachmentUrl);
+      setViewingReceiptUrl(res.signed_url);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to load receipt', 'error');
+    } finally {
+      setIsLoadingReceipt(false);
+    }
+  };
 
   useEffect(() => {
     if (selectedExpenseForEdit) {
@@ -318,8 +331,9 @@ export const ExpensesPage: React.FC<ExpensesPageProps> = ({
                             <span>{expense.description || expense.category?.name}</span>
                             {expense.attachment_url && (
                               <button
-                                onClick={() => setViewingReceiptUrl(expense.attachment_url || null)}
-                                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 p-0.5"
+                                onClick={() => handleViewReceipt(expense.attachment_url!)}
+                                disabled={isLoadingReceipt}
+                                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 p-0.5 cursor-pointer disabled:opacity-50"
                                 title="View Receipt"
                               >
                                 <Paperclip className="w-3.5 h-3.5" />

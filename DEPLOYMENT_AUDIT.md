@@ -12,12 +12,13 @@
 |---|---|---|---|
 | **PostgreSQL Compatibility** | Database | ✅ **PASS** | Models use standard PostgreSQL types (`SERIAL`, `VARCHAR`, `TIMESTAMP WITH TIME ZONE`, `BOOLEAN`, `DATE`). Integer paise preserved across all financial models (`amount_paise`, `balance_paise`). No floating-point financial storage. |
 | **Supabase Storage** | Attachments | ✅ **PASS** | Uploads stream directly to Supabase Storage bucket (`receipts/user_{id}/{uuid}.ext`) via authenticated REST API. Deletion API implemented. Strictly validates MIME types (JPEG, PNG, WebP, PDF) and 5MB size limit. |
+| **Private Supabase Receipt Storage** | Backend Storage | ✅ **PASS** | `receipts` bucket is PRIVATE. Service-role key is used server-side only to upload receipts at `user_{user_id}/{uuid}.{ext}` and issue 10-minute short-lived signed URLs. Public URLs are never generated or stored. |
 | **Render Ephemeral Filesystem Isolation** | Backend Storage | ✅ **PASS** | In production (`SUPABASE_URL` & `SUPABASE_KEY` configured), receipts are never written to Render's ephemeral container filesystem. Failed Supabase uploads raise HTTP 502 rather than silently writing to disk. |
 | **Render Container & Port Support** | Backend Hosting | ✅ **PASS** | `Dockerfile` includes `libpq-dev` and executes `uvicorn` using `${PORT:-8000}`, adapting dynamically to Render's injected `$PORT`. Health check `GET /health` returns `{"status": "ok"}`. |
 | **CORS Configuration** | Security / Network | ✅ **PASS** | Dynamic CORS via `FRONTEND_URL`. Strips trailing slashes automatically (e.g. `https://finstudent.vercel.app/` ➔ `https://finstudent.vercel.app`) preventing browser CORS preflight failures. Local ports (`5173`, `3000`) supported. |
 | **Vercel Frontend & SPA Routing** | Frontend Hosting | ✅ **PASS** | `vercel.json` provides SPA fallback rewrites (`/(.*)` ➔ `/index.html`). Dynamic `VITE_API_URL` handling automatically sanitizes trailing slashes and accidental `/api/v1` suffixes. Production build (`npm run build`) builds cleanly in 1.3s. |
 | **Supabase Secret Key Protection** | Frontend Security | ✅ **PASS** | Verified via deep search: Zero Supabase keys (`SUPABASE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) or database credentials appear in frontend code, package configs, or production JavaScript bundles. |
-| **User Data Isolation** | Backend Security | ✅ **PASS** | Verified with 6 dedicated isolation tests: User A cannot read, update, delete, or duplicate User B's expenses, categories, accounts, incomes, budgets, or attachments (returns 404). JSON backup strictly isolates user data. |
+| **User Data Isolation** | Backend Security | ✅ **PASS** | Verified with 8 dedicated isolation and signed URL authorization tests: User A cannot read, update, delete, or duplicate User B's expenses, categories, accounts, incomes, budgets, or attachments (returns 403/404). Cross-user receipt path/ID manipulation is blocked. |
 | **Database Migrations** | Database / Alembic | ✅ **PASS** | Alembic configured with baseline migration `001_initial_schema.py` representing all 10 tables. `env.py` supports direct `DATABASE_URL` override with automatic `postgres://` ➔ `postgresql://` normalization. Safe non-destructive SQLite-to-PostgreSQL script provided (`migrate_sqlite_to_pg.py`). |
 | **₹0/Month Free-Tier Compliance** | Infrastructure | ✅ **PASS** | Stack strictly uses verified free tiers (Supabase Free: 500MB DB + 1GB Storage, Render Free: 750 hrs/mo, Vercel Free: 100GB/mo). No credit card required; zero paid third-party dependencies. |
 
@@ -33,8 +34,8 @@ All variables in code match the exact documented names:
 | `SECRET_KEY` | Backend (`.env` / Render) | 32+ character key used by `python-jose` for HS256 JWT signing. | Default dev secret |
 | `FRONTEND_URL` | Backend (`.env` / Render) | Allowed domain for CORS headers. Trailing slashes automatically sanitized. | `None` (allows localhost) |
 | `SUPABASE_URL` | Backend (`.env` / Render) | Project endpoint (`https://xyz.supabase.co`) for storage REST calls. | `None` (uses local storage fallback) |
-| `SUPABASE_KEY` | Backend (`.env` / Render) | Service-role or Anon key used server-side for Storage API authorization. | Supports `SUPABASE_SERVICE_ROLE_KEY` fallback |
-| `SUPABASE_STORAGE_BUCKET` | Backend (`.env` / Render) | Storage bucket name for receipts. | `"receipts"` |
+| `SUPABASE_KEY` | Backend (`.env` / Render) | Supabase service-role secret key used server-side ONLY for private Storage API operations. | Supports `SUPABASE_SERVICE_ROLE_KEY` fallback |
+| `SUPABASE_STORAGE_BUCKET` | Backend (`.env` / Render) | Private storage bucket name for receipts. | `"receipts"` |
 | `VITE_API_URL` | Frontend (Vercel) | Backend API domain. Automatically normalizes `/api/v1` path. | `""` (uses local Vite proxy) |
 
 ---
@@ -44,8 +45,8 @@ All variables in code match the exact documented names:
 1. **Automated Pytest Test Suite**:
    ```text
    backend/tests/test_all_flows.py ............. 7/7 PASSED [100%]
-   backend/tests/test_isolation_and_security.py 6/6 PASSED [100%]
-   ======================= 13 passed in 4.53s =======================
+   backend/tests/test_isolation_and_security.py 8/8 PASSED [100%]
+   ======================= 15 passed in 5.10s =======================
    ```
 2. **Health Check Response**:
    ```bash
@@ -57,9 +58,9 @@ All variables in code match the exact documented names:
 4. **Vite Production Build**:
    ```text
    dist/index.html                   1.58 kB
-   dist/assets/index-DMWNkERd.css   52.86 kB
-   dist/assets/index-B09wHOKb.js   761.98 kB
-   ✓ built in 1.33s (zero TypeScript or rollup errors)
+   dist/assets/index-C_iUTv4p.css   52.90 kB
+   dist/assets/index-DMVW62XO.js   762.46 kB
+   ✓ built in 883ms (zero TypeScript or rollup errors)
    ```
 
 ---
@@ -70,12 +71,12 @@ Follow this order strictly:
 
 ### Step 1: Set up Supabase
 1. Create a free account at [supabase.com](https://supabase.com) and create project `finstudent` (select Free tier).
-2. Go to **Storage** ➔ click **New Bucket** ➔ Name: `receipts` ➔ Set to **Public** ➔ Click **Save**.
+2. Go to **Storage** ➔ click **New Bucket** ➔ Name: `receipts` ➔ Keep **PRIVATE** (Public bucket toggled OFF) ➔ Click **Save**.
 3. Go to **Project Settings** ➔ **Database** ➔ copy the **URI** connection string:
    ```text
    postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
    ```
-4. Go to **Project Settings** ➔ **API** ➔ copy **Project URL** and **service_role key** (or **anon key**).
+4. Go to **Project Settings** ➔ **API** ➔ copy **Project URL** and **service_role key**.
 5. Apply migrations to Supabase from your terminal:
    ```powershell
    cd backend

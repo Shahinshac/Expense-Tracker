@@ -267,7 +267,11 @@ def test_upload_validations_and_isolation(client: TestClient):
         files={"file": ("receipt.png", valid_png, "image/png")}
     )
     assert res_valid.status_code == 201
-    attach_id = res_valid.json()["id"]
+    upload_data = res_valid.json()
+    attach_id = upload_data["id"]
+    assert "signed_url" in upload_data
+    assert upload_data["expires_in"] == 600
+    assert "public" not in upload_data["file_path"].lower()
 
     # 4. User B cannot delete User A's attachment
     del_cross = client.delete(f"/api/v1/uploads/{attach_id}", headers=headers_b)
@@ -276,3 +280,174 @@ def test_upload_validations_and_isolation(client: TestClient):
     # 5. User A can delete their own attachment
     del_own = client.delete(f"/api/v1/uploads/{attach_id}", headers=headers_a)
     assert del_own.status_code == 200
+
+
+def test_receipt_signed_url_flow_and_authorization(client: TestClient):
+    """
+    Verify:
+    1. Upload returns short-lived signed URL and private storage path.
+    2. Authenticated user can access receipt signed URL by ID and by Path (expires_in = 600).
+    3. Unauthorized receipt access is strictly blocked:
+       - No token -> 401 Unauthorized
+       - Cross-user ID access -> 403 Forbidden
+       - Cross-user Path access -> 403 Forbidden
+       - Path traversal attempt (e.g. ..) -> 400 Bad Request
+    4. Receipt deletion prevents subsequent access -> 404 Not Found.
+    """
+    # 1. Register User A and User B
+    res_a = client.post("/api/v1/auth/register", json={
+        "email": "signed_a@college.edu",
+        "password": "passwordA123",
+        "full_name": "Signed Alpha",
+        "currency": "INR"
+    }).json()
+    token_a = res_a["access_token"]
+    user_a_id = res_a["user"]["id"]
+    headers_a = {"Authorization": f"Bearer {token_a}"}
+
+    res_b = client.post("/api/v1/auth/register", json={
+        "email": "signed_b@college.edu",
+        "password": "passwordB123",
+        "full_name": "Signed Beta",
+        "currency": "INR"
+    }).json()
+    token_b = res_b["access_token"]
+    headers_b = {"Authorization": f"Bearer {token_b}"}
+
+    # 2. User A uploads a valid receipt
+    receipt_bytes = io.BytesIO(b"\x89PNG\r\n\x1a\n" + b"TEST_RECEIPT_CONTENT" * 10)
+    upload_res = client.post(
+        "/api/v1/uploads/",
+        headers=headers_a,
+        files={"file": ("lunch_receipt.png", receipt_bytes, "image/png")}
+    )
+    assert upload_res.status_code == 201
+    upload_body = upload_res.json()
+    attach_id = upload_body["id"]
+    file_path = upload_body["file_path"]
+    assert upload_body["expires_in"] == 600
+    assert "signed_url" in upload_body
+    # Ensure public storage URL is never stored
+    assert "public" not in file_path.lower()
+
+    # 3. Authenticated receipt access by ID (User A)
+    res_signed_id = client.get(f"/api/v1/uploads/{attach_id}/signed-url", headers=headers_a)
+    assert res_signed_id.status_code == 200
+    signed_body = res_signed_id.json()
+    assert signed_body["expires_in"] == 600
+    assert "signed_url" in signed_body
+    assert signed_body["file_path"] == file_path
+
+    # 4. Authenticated receipt access by Path (User A)
+    res_signed_path = client.get(f"/api/v1/uploads/signed-url?path={file_path}", headers=headers_a)
+    assert res_signed_path.status_code == 200
+    assert res_signed_path.json()["expires_in"] == 600
+
+    # 5. Unauthorized access: Unauthenticated (no token)
+    res_unauth_id = client.get(f"/api/v1/uploads/{attach_id}/signed-url")
+    assert res_unauth_id.status_code == 401
+    res_unauth_path = client.get(f"/api/v1/uploads/signed-url?path={file_path}")
+    assert res_unauth_path.status_code == 401
+
+    # 6. Unauthorized access: Cross-user ID manipulation (User B tries User A's ID)
+    res_cross_id = client.get(f"/api/v1/uploads/{attach_id}/signed-url", headers=headers_b)
+    assert res_cross_id.status_code == 403
+    assert "Access denied" in res_cross_id.json()["detail"]
+
+    # 7. Unauthorized access: Cross-user Path manipulation (User B tries user_{A}/ path)
+    res_cross_path = client.get(f"/api/v1/uploads/signed-url?path=user_{user_a_id}/secret.png", headers=headers_b)
+    assert res_cross_path.status_code == 403
+    assert "Access denied" in res_cross_path.json()["detail"]
+
+    # 8. Unauthorized access: Path traversal attempt
+    res_traversal = client.get(f"/api/v1/uploads/signed-url?path=user_{user_a_id}/../etc/passwd", headers=headers_a)
+    assert res_traversal.status_code == 400
+
+    # 9. Non-existent receipt ID for authenticated user
+    res_not_found = client.get("/api/v1/uploads/999999/signed-url", headers=headers_a)
+    assert res_not_found.status_code == 404
+
+    # 10. Receipt deletion
+    del_res = client.delete(f"/api/v1/uploads/{attach_id}", headers=headers_a)
+    assert del_res.status_code == 200
+
+    # 11. Accessing deleted receipt returns 404
+    res_deleted = client.get(f"/api/v1/uploads/{attach_id}/signed-url", headers=headers_a)
+    assert res_deleted.status_code == 404
+
+
+def test_supabase_storage_signed_url_generation(monkeypatch):
+    """
+    Verify server-side Supabase signed URL generation:
+    - Uses service-role key on the FastAPI backend
+    - Generates 10-minute short-lived signed URL
+    - Does NOT leak secrets
+    """
+    import asyncio
+    from app.core.config import settings
+    from app.api.v1.endpoints.uploads import create_supabase_signed_url
+    import httpx
+
+    fake_supabase_url = "https://mockproject.supabase.co"
+    fake_service_key = "mock-secret-service-role-key-never-expose"
+    fake_bucket = "receipts"
+
+    monkeypatch.setattr(settings, "SUPABASE_URL", fake_supabase_url)
+    monkeypatch.setattr(settings, "SUPABASE_KEY", fake_service_key)
+    monkeypatch.setattr(settings, "SUPABASE_STORAGE_BUCKET", fake_bucket)
+
+    called_requests = []
+
+    class MockResponse:
+        def __init__(self, status_code, json_data):
+            self.status_code = status_code
+            self._json = json_data
+            self.text = str(json_data)
+
+        def json(self):
+            return self._json
+
+    class MockAsyncClient:
+        def __init__(self, timeout=None):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+        async def post(self, url, json=None, headers=None, content=None):
+            called_requests.append({
+                "url": url,
+                "json": json,
+                "headers": headers
+            })
+            return MockResponse(
+                200,
+                {"signedURL": "/object/sign/receipts/user_42/receipt_uuid.png?token=mock_secure_token_12345"}
+            )
+
+    monkeypatch.setattr(httpx, "AsyncClient", MockAsyncClient)
+
+    # Generate signed URL
+    object_path = "user_42/receipt_uuid.png"
+    signed_url = asyncio.run(create_supabase_signed_url(object_path, expires_in=600))
+
+    # 1. Verify correct endpoint called
+    assert len(called_requests) == 1
+    req = called_requests[0]
+    expected_endpoint = f"{fake_supabase_url}/storage/v1/object/sign/{fake_bucket}/{object_path}"
+    assert req["url"] == expected_endpoint
+
+    # 2. Verify expiresIn is 10 minutes (600s)
+    assert req["json"] == {"expiresIn": 600}
+
+    # 3. Verify server-side authorization uses the service-role key
+    assert req["headers"]["Authorization"] == f"Bearer {fake_service_key}"
+    assert req["headers"]["apiKey"] == fake_service_key
+
+    # 4. Verify resulting signed URL is properly formatted
+    assert signed_url == f"{fake_supabase_url}/storage/v1/object/sign/receipts/user_42/receipt_uuid.png?token=mock_secure_token_12345"
+
+

@@ -115,15 +115,15 @@ Follow these exact steps to set up your free cloud database and receipt storage 
      postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
      ```
    - (Optional for serverless/container pooling): Under **Connection Pooling**, choose Mode `Transaction` (port 6543) if you experience connection limits.
-4. **Create Receipt Storage Bucket**:
+4. **Create Receipt Storage Bucket (PRIVATE)**:
    - In the left sidebar, click **Storage** ➔ **New Bucket**.
    - Name: `receipts` (lowercase).
-   - Set bucket to **Public** (recommended so uploaded receipt URLs can be viewed in the browser) or private with authenticated access.
+   - Keep bucket **PRIVATE** (Public bucket toggled OFF). Receipts are securely accessed via short-lived (10-minute) signed URLs generated on-demand by the backend.
    - Click **Save**.
 5. **Obtain Supabase API Keys**:
    - In **Project Settings** ➔ **API**, copy:
      - **Project URL** (`https://[PROJECT-REF].supabase.co`)
-     - **anon public key** or **service_role secret key** (Used strictly in the backend `.env`, NEVER in frontend!).
+     - **service_role secret key** (Used strictly on the FastAPI backend for private bucket access; NEVER exposed to the React frontend!).
 6. **Apply Schema / Migrations**:
    Run the Alembic migration directly against Supabase:
    ```bash

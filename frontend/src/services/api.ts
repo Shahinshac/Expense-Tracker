@@ -134,7 +134,7 @@ export const api = {
     body: JSON.stringify({ mode, data })
   }),
 
-  // File Upload
+  // File Upload & Receipts
   uploadReceipt: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -150,6 +150,30 @@ export const api = {
       const err = await response.json().catch(() => ({ detail: 'Upload failed' }));
       throw new Error(err.detail || 'Upload failed');
     }
-    return response.json();
-  }
+    return response.json() as Promise<{
+      id: number;
+      file_name: string;
+      file_path: string;
+      file_url: string;
+      signed_url?: string;
+      expires_in?: number;
+      file_size: number;
+      mime_type: string;
+    }>;
+  },
+
+  getReceiptSignedUrl: (pathOrId: string | number) => {
+    if (typeof pathOrId === 'number' || /^\d+$/.test(String(pathOrId).trim())) {
+      return request<{ signed_url: string; expires_in: number; file_path: string; attachment_id?: number }>(
+        `/uploads/${pathOrId}/signed-url`
+      );
+    }
+    const q = new URLSearchParams({ path: String(pathOrId).trim() });
+    return request<{ signed_url: string; expires_in: number; file_path: string; attachment_id?: number }>(
+      `/uploads/signed-url?${q.toString()}`
+    );
+  },
+
+  deleteReceipt: (id: number) => request<{ message: string; id: number }>(`/uploads/${id}`, { method: 'DELETE' })
 };
+
